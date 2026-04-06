@@ -1,0 +1,20 @@
+<div class="module-container anim-in">
+    <div class="topbar">
+        <div class="topbar-left">
+            <div class="topbar-title">Dashboard Overview</div>
+            <div class="topbar-sub" id="dash-date"></div>
+        </div>
+    </div>
+
+    <div id="dashboard-content" style="margin-top:24px;">
+        </div>
+</div>
+
+<script>
+    // Local script for minor UI updates
+    document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-IN', { 
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+    });
+    // Initialize module logic
+    if (typeof dashboard !== 'undefined') dashboard.init();
+</script>

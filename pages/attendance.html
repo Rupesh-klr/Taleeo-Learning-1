@@ -1,0 +1,29 @@
+<div class="module-container anim-in">
+    <div class="topbar">
+        <div class="topbar-left">
+            <div class="topbar-title">Attendance Tracking</div>
+        </div>
+        <div class="topbar-right" id="attendance-actions">
+            </div>
+    </div>
+
+    <div class="card" style="margin-top: 24px;">
+        <div class="card-header">
+            <div class="card-title" id="attendance-list-title">Attendance Overview</div>
+        </div>
+        <div style="overflow-x: auto;">
+            <table class="tbl" id="attendance-table">
+                <thead>
+                    <tr id="attendance-table-head">
+                        </tr>
+                </thead>
+                <tbody id="attendance-table-body">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (typeof attendance !== 'undefined') attendance.init();
+</script>

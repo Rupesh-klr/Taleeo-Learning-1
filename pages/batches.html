@@ -1,0 +1,17 @@
+<div class="module-container anim-in">
+    <div class="topbar">
+        <div class="topbar-left">
+            <div class="topbar-title">Batch Management</div>
+        </div>
+        <div class="topbar-right">
+            <button class="btn btn-v btn-sm admin-only" onclick="openModal('modal-add-batch')">+ New Batch</button>
+        </div>
+    </div>
+
+    <div class="grid-2" id="batches-grid" style="margin-top: 24px;">
+        </div>
+</div>
+
+<script>
+    if (typeof batches !== 'undefined') batches.init();
+</script>

@@ -1,0 +1,18 @@
+<div class="module-container anim-in">
+    <div class="topbar">
+        <div class="topbar-left">
+            <div class="topbar-title">Class Recordings</div>
+            <div class="topbar-sub">Review past sessions and materials</div>
+        </div>
+        <div class="topbar-right">
+            <button class="btn btn-v btn-sm admin-only" onclick="openModal('modal-add-recording')">+ Add Recording</button>
+        </div>
+    </div>
+
+    <div id="recordings-list" style="display: flex; flex-direction: column; gap: 14px; margin-top: 24px;">
+        </div>
+</div>
+
+<script>
+    if (typeof recordings !== 'undefined') recordings.init();
+</script>
