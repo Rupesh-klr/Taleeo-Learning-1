@@ -7,12 +7,25 @@ if (typeof auth === 'undefined') {
         _loginPending: null,
 
         // Ensure doLogout is explicitly defined as a function
-        doLogout: function() {
+        doLogout: async function() {
             console.log("🚪 Logging out...");
+            if (USE_SERVER) {
+                try {
+                    // Call backend to clear httpOnly cookies
+                    await fetch(`${BACKEND_URL}/auth/logout`, { method: 'POST', credentials: 'include' });
+                } catch (e) { console.error("Logout API failed", e); }
+            }
             _currentUser = null;
             // Use the ls helper to clear the session
             localStorage.removeItem('tlms_session_user');
-            
+            // Clear all local identifiers
+            localStorage.removeItem('tlms_session_user');
+            localStorage.removeItem('tlms_tab_history');
+            sessionStorage.removeItem('lms_tab_id');
+
+            // Hard redirect to login
+            window.location.hash = 'login';
+            location.reload();
             // Re-use existing redirection logic
             if (typeof redirectToLogin === 'function') {
                 redirectToLogin();
@@ -20,6 +33,7 @@ if (typeof auth === 'undefined') {
                 window.location.hash = 'login';
                 location.reload(); // Hard fallback
             }
+            
         },
         doLogin: async function() {
             var email = $('#login-email').val().trim().toLowerCase();

@@ -123,66 +123,48 @@ function buildSidebarShell() {
 /* ── JQUERY HASH ROUTER ── */
 // Canonical jQuery pattern to manage page loading without reloads
 function handleHashRouter() {
-    let hash = window.location.hash.substring(1); // Remove '#'
+    let hash = window.location.hash.substring(1);
+    if (!hash) return redirectToDefaultPage();
 
-    // If no hash (fresh load), determine default page by role
-    if (!hash) {
-        if (!_currentUser) return redirectToLogin();
-        hash = ROUTES["default"][_currentUser.role] || "login";
-        window.location.hash = hash; // Redirect to default
-        return;
-    }
-
-    // Special case for login/signup reloads (if already logged in)
-    if ((hash === 'login' || hash === 'signup') && _currentUser) {
-        redirectToDefaultPage();
-        return;
-    }
-
-    // Find the correct template path from ROUTES mapping
     const templatePath = ROUTES[hash];
+    if (!templatePath) return;
 
-    if (!templatePath) {
-        // Simple 404 handler
-        document.getElementById('main-content').innerHTML = `
-            <div style="padding:40px;text-align:center;color:var(--muted);">
-                <h2>404 — Section Not Found</h2>
-                <a href="#">Go back to Dashboard</a>
-            </div>`;
-        return;
-    }
-
-    // Use jQuery .load() to fetch and insert the HTML block
     showLoading();
-    
-    // canonical jQuery template loader
-    $( "#main-content" ).load( templatePath + " .module-container", function( response, status, xhr ) {
-        if ( status == "error" ) {
-          $( "#main-content" ).html( "<p>Failed to load " + templatePath + "</p>" );
-          return;
+
+    // Use jQuery .load() to fetch the fragment
+    $("#main-content").load(templatePath + " .module-container", function(res, status, xhr) {
+        if (status === "error") {
+            $("#main-content").html("<h2>Error 404: Content not found</h2>");
+            return;
         }
-        
-        // --- 1. Update Sidebar Active State ---
-        document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
-        const activeNav = document.getElementById('nav-' + hash);
-        if (activeNav) activeNav.classList.add('active');
-        
-        // --- 2. Save Navigation State ---
-        saveNavState(hash, null); // Clear args by default
-        
-        // --- 3. Call specific module initialization ---
-        // This is where module-specific rendering happens
-        initializeModule(hash);
+
+        // 1. Highlight the correct sidebar item
+        $('.sb-item').removeClass('active');
+        $(`#nav-${hash}`).addClass('active');
+
+        // 2. CRITICAL: Manually trigger the related JavaScript module
+        initializeModuleLogic(hash);
     });
 }
-function initializeModule(hash) {
-    if (hash === 'login' || hash === 'signup') return;
+function initializeModuleLogic(hash) {
+    // This map connects the URL hash to your JS objects
+    const moduleMap = {'admin-batches': typeof batches !== 'undefined' ? batches : null,
+        'admin-curriculum': typeof curriculum !== 'undefined' ? curriculum : null,
+        'student-course': typeof curriculum !== 'undefined' ? curriculum : null,
+        'admin-dashboard': typeof dashboard !== 'undefined' ? dashboard : null,
+        'student-dashboard': dashboard,
+        'admin-attendance': attendance
+        // Add others as needed
+    };
+
+    const moduleObj = moduleMap[hash];
     
-    // Dynamically call module init based on the hash
-    if (hash === 'admin-curriculum' || hash === 'student-course') {
-        if (typeof curriculum !== 'undefined') {
-            curriculum.init(hash);
-        }
+    // Check if the object exists and has an init function
+    if (moduleObj && typeof moduleObj.init === 'function') {
+        console.log(`🚀 Initializing Logic for: ${hash}`);
+        moduleObj.init(); 
+    } else {
+        console.warn(`⚠️ No JS logic found for route: ${hash}`);
     }
 }
 /* ── AUTH HELPERS ── */
