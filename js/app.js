@@ -312,13 +312,21 @@ async function apiGet(endpoint) {
             headers: { 'Content-Type': 'application/json' }
         });
 
+       
         if (response.status === 401) {
-            console.warn("Session expired - redirecting to login.");
-            auth.doLogout(); 
+            console.warn("Session expired (401). Attempting logout...");
+            // Safe call to auth module
+            if (window.auth && typeof window.auth.doLogout === 'function') {
+                window.auth.doLogout();
+            } else {
+                // Manual fallback if auth module isn't ready
+                localStorage.removeItem('tlms_session_user');
+                window.location.hash = 'login';
+            }
             return null;
         }
 
-        if (!response.ok) throw new Error("Server Error");
+        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
         return await response.json();
     } catch (error) {
         console.error("API Get Error:", error);
