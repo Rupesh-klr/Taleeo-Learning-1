@@ -82,7 +82,26 @@ function buildSidebarShell() {
         avatarEl.style.background = isAdminType ? 'var(--linear-admin)' : 'var(--linear-v)';
     }
 
-    renderNavigationLinks(u.role);
+    // Replace renderNavigationLinks(u.role) with this logic:
+    const navContainer = document.getElementById('sidebar-nav');
+    if (!navContainer) return;
+
+    const allowedModules = FRONTEND_MODULES[u.role] || FRONTEND_MODULES['student'];
+    let navHTML = '';
+    let currentSection = '';
+
+    allowedModules.forEach(mod => {
+        if (mod.section && mod.section !== currentSection) {
+            navHTML += `<div class="sb-section">${mod.section}</div>`;
+            currentSection = mod.section;
+        }
+        navHTML += `
+            <a href="#${mod.id}" class="sb-item" id="nav-${mod.id}">
+                <span class="sb-item-icon">${mod.icon}</span>${mod.label}
+            </a>`;
+    });
+    
+    navContainer.innerHTML = navHTML;
 }
 /* ── JQUERY HASH ROUTER ── */
 // Canonical jQuery pattern to manage page loading without reloads
@@ -286,27 +305,26 @@ async function apiGet(endpoint) {
     try {
         const response = await fetch(`${BACKEND_URL}${endpoint}`, {
             method: 'GET',
-            credentials: 'include', // CRITICAL: This sends your cookies/session
-            headers: { 'Content-Type': 'application/json' }
+            credentials: 'include', // MANDATORY: Sends the session cookie
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json' 
+            }
         });
 
         if (response.status === 401) {
-            auth.doLogout(); // Automatically boot to login if session expired
-            throw new Error("Session expired. Please login again.");
+            console.warn("Session expired or unauthorized");
+            auth.doLogout(); // Boot to login
+            return null;
         }
 
-        if (!response.ok) {
-            const errData = await response.json();
-            throw new Error(errData.message || "Server Error");
-        }
-
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return await response.json();
     } catch (error) {
-        console.error(`GET Error [${endpoint}]:`, error);
+        console.error("API Get Error:", error);
         throw error;
     }
 }
-
 // Global POST/PUT Helper
 async function apiWrite(endpoint, method = 'POST', payload = {}) {
     try {
