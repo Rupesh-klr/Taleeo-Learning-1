@@ -7,9 +7,18 @@ const MAX_TABS = 15;
 var _currentUser = null;
 
 /* ── HELPERS & UTILITIES ── */
+// js/app.js (Top of file)
 function ls(key, val) {
-  if (val !== undefined) { localStorage.setItem('tlms_' + key, JSON.stringify(val)); return val; }
-  try { return JSON.parse(localStorage.getItem('tlms_' + key)); } catch (e) { return null; }
+  if (val !== undefined) { 
+    localStorage.setItem('tlms_' + key, JSON.stringify(val)); 
+    return val; 
+  }
+  try { 
+    const item = localStorage.getItem('tlms_' + key);
+    return item ? JSON.parse(item) : null; 
+  } catch (e) { 
+    return null; 
+  }
 }
 
 function showToast(msg, icon) {
@@ -200,24 +209,32 @@ function redirectToDefaultPage() {
 }
 
 // Centralized Session Check
+// js/app.js
 async function checkGlobalSession() {
-    var savedUser = ls('session_user');
-    if (!savedUser) return redirectToLogin();
-
-    _currentUser = savedUser; 
+    var savedUser = ls('session_user'); // Checks 'tlms_session_user'
     
     if (USE_SERVER) {
-        // Use your new helper which includes credentials
-        const data = await apiGet('/auth/me'); 
+        // Pass 'true' for allowSoftFail to prevent automatic localStorage wipe
+        const data = await apiGet('/auth/me', true); 
+        
         if (data && data.user) {
             _currentUser = data.user;
             ls('session_user', data.user);
-            onSessionVerified(); // This switches the UI from login to app
+            onSessionVerified();
         } else {
-            redirectToLogin();
+            // If server says no, but we have local data, stay on login or try local fallback
+            if (!savedUser) {
+                redirectToLogin();
+            } else {
+                _currentUser = savedUser;
+                onSessionVerified(); // Optional: Allow offline access with local data
+            }
         }
-    } else {
+    } else if (savedUser) {
+        _currentUser = savedUser;
         onSessionVerified();
+    } else {
+        redirectToLogin();
     }
 }
 // js/app.js
@@ -275,62 +292,37 @@ function completeLogin(user) {
     showToast('Welcome back, ' + user.name + '! 👋', '✅');
 }
 // js/app.js
-function buildSidebarShell() {
-    var u = _currentUser;
-    if (!u) return;
-
-    // Use safe selection to prevent null errors
-    const nameEl = document.getElementById('sb-name');
-    const roleEl = document.getElementById('sb-role');
-    const badgeEl = document.getElementById('sb-role-badge');
-    const avatarEl = document.getElementById('sb-avatar');
-
-    if (nameEl) nameEl.textContent = u.name;
-    if (roleEl) roleEl.textContent = u.role.charAt(0).toUpperCase() + u.role.slice(1);
-    
-    var isAdminType = ['admin', 'superadmin', 'staff'].includes(u.role);
-    if (badgeEl) badgeEl.textContent = isAdminType ? 'Staff Panel' : 'Student Portal';
-    
-    if (avatarEl) {
-        avatarEl.textContent = u.name[0].toUpperCase();
-        avatarEl.style.background = isAdminType ? 'var(--linear-admin)' : 'var(--linear-v)';
-    }
-
-    renderNavigationLinks(u.role);
-}
 /* ═══════════════════════════════════════════════════════
    GLOBAL DATA FETCHERS (Centralized in app.js)
 ═══════════════════════════════════════════════════════ */
 
 // Global GET Helper
 // Global GET Helper
-async function apiGet(endpoint) {
+// js/app.js
+async function apiGet(endpoint, allowSoftFail = false) {
     try {
         const response = await fetch(`${BACKEND_URL}${endpoint}`, {
             method: 'GET',
-            credentials: 'include', // CRITICAL: This fixed the 401 error
+            credentials: 'include', // Sends session cookie
             headers: { 'Content-Type': 'application/json' }
         });
 
-       
         if (response.status === 401) {
-            console.warn("Session expired (401). Attempting logout...");
-            // Safe call to auth module
+            // If we are just checking the session, don't wipe the storage yet
+            if (allowSoftFail) return null; 
+
+            console.warn("Session expired. Logging out...");
             if (window.auth && typeof window.auth.doLogout === 'function') {
                 window.auth.doLogout();
-            } else {
-                // Manual fallback if auth module isn't ready
-                localStorage.removeItem('tlms_session_user');
-                window.location.hash = 'login';
             }
             return null;
         }
 
-        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return await response.json();
     } catch (error) {
-        console.error("API Get Error:", error);
-        throw error;
+        console.error(`Fetch Error [${endpoint}]:`, error);
+        return null;
     }
 }
 
