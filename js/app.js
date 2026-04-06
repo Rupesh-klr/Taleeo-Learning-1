@@ -153,16 +153,11 @@ function handleHashRouter() {
 function initializeModule(hash) {
     if (hash === 'login' || hash === 'signup') return;
     
-    switch(hash) {
-        case 'admin-dashboard':
-        case 'student-dashboard': dashboard.init(); break;
-        case 'admin-curriculum':
-        case 'student-course': curriculum.init(hash); break;
-        case 'admin-batches': batches.init(); break;
-        case 'admin-recordings':
-        case 'student-recordings': recordings.init(); break;
-        case 'admin-attendance':
-        case 'student-attendance': attendance.init(); break;
+    // Dynamically call module init based on the hash
+    if (hash === 'admin-curriculum' || hash === 'student-course') {
+        if (typeof curriculum !== 'undefined') {
+            curriculum.init(hash);
+        }
     }
 }
 /* ── AUTH HELPERS ── */
