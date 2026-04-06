@@ -1,15 +1,13 @@
 /* ═══════════════════════════════════════════════════════
    AUTH MODULE
 ═══════════════════════════════════════════════════════ */
-var auth = {
-    _loginPending: null,
-
-    doLogin: async function() {
-        var email = document.getElementById('login-email').value.trim().toLowerCase();
-        var pass = document.getElementById('login-pass').value.trim();
-        var msg = document.getElementById('login-msg');
-
-        if (USE_SERVER) {
+// js/modules/auth.js
+if (typeof auth === 'undefined') {
+    var auth = {
+        doLogin: async function() {
+            var email = $('#login-email').val().trim().toLowerCase();
+            var pass = $('#login-pass').val().trim();
+            
             try {
                 const response = await fetch(`${BACKEND_URL}/auth/login`, {
                     method: 'POST',
@@ -18,31 +16,15 @@ var auth = {
                     body: JSON.stringify({ email, pass })
                 });
                 const result = await response.json();
+                
                 if (!response.ok) throw new Error(result.message);
 
-                if (result.requiresOtp) {
-                    this._loginPending = result.user;
-                    document.getElementById('step-login').style.display = 'none';
-                    document.getElementById('step-otp').style.display = 'block';
-                } else {
-                    completeLogin(result.user);
-                }
+                // This is the CRITICAL part: call the function that switches the shell
+                completeLogin(result.user); 
+                
             } catch (e) {
-                msg.className = 'login-msg show error';
-                msg.textContent = '❌ ' + e.message;
+                $('#login-msg').addClass('show error').text('❌ ' + e.message);
             }
         }
-    },
-
-    doLogout: function() {
-        _currentUser = null;
-        localStorage.removeItem('tlms_session_user');
-        redirectToLogin();
-    }
-};
-if (typeof auth === 'undefined') {
-     auth = {
-        doLogin: async function() { /* ... */ },
-        doLogout: function() { /* ... */ }
     };
 }

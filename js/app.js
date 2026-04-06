@@ -244,3 +244,20 @@ $(document).ready(function() {
     // Delay checkSession slightly to let the initial splash screen show if needed
     setTimeout(checkGlobalSession, 100); 
 });
+// js/app.js
+function completeLogin(user) {
+    _currentUser = user;
+    ls('session_user', user); // Store in tlms_session_user
+
+    // Switch Visibility
+    $('#login-page').hide();
+    $('#app-shell').show();
+    
+    buildSidebarShell();
+    
+    // REDIRECT based on role
+    const defaultPage = ROUTES["default"][user.role] || "admin-dashboard";
+    window.location.hash = defaultPage; // This triggers handleHashRouter
+    
+    showToast('Welcome back, ' + user.name + '! 👋', '✅');
+}
