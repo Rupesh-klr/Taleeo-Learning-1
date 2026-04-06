@@ -72,8 +72,18 @@ function saveNavState(pageId, args = null) {
 /* ── RBAC SIDEBAR BUILDER ── */
 function buildSidebarShell() {
     var u = _currentUser;
-    document.getElementById('sb-name').textContent = u.name;
-    document.getElementById('sb-role').textContent = u.role.charAt(0).toUpperCase() + u.role.slice(1);
+    if (!u) return;
+
+    // Use safe selection to prevent null pointer errors
+    const nameEl = document.getElementById('sb-name');
+    const roleEl = document.getElementById('sb-role');
+    const badgeEl = document.getElementById('sb-role-badge');
+    const avatarEl = document.getElementById('sb-avatar');
+    const navContainer = document.getElementById('sidebar-nav');
+
+    if (nameEl) nameEl.textContent = u.name;
+    if (roleEl) roleEl.textContent = u.role.charAt(0).toUpperCase() + u.role.slice(1);
+    
     var isAdminType = ['admin', 'superadmin', 'staff'].includes(u.role);
     if (badgeEl) badgeEl.textContent = isAdminType ? 'Staff Panel' : 'Student Portal';
     
@@ -82,26 +92,24 @@ function buildSidebarShell() {
         avatarEl.style.background = isAdminType ? 'var(--linear-admin)' : 'var(--linear-v)';
     }
 
-    // Replace renderNavigationLinks(u.role) with this logic:
-    const navContainer = document.getElementById('sidebar-nav');
-    if (!navContainer) return;
+    // Fixed Navigation logic to replace missing renderNavigationLinks
+    if (navContainer) {
+        const allowedModules = FRONTEND_MODULES[u.role] || FRONTEND_MODULES['student'];
+        let navHTML = '';
+        let currentSection = '';
 
-    const allowedModules = FRONTEND_MODULES[u.role] || FRONTEND_MODULES['student'];
-    let navHTML = '';
-    let currentSection = '';
-
-    allowedModules.forEach(mod => {
-        if (mod.section && mod.section !== currentSection) {
-            navHTML += `<div class="sb-section">${mod.section}</div>`;
-            currentSection = mod.section;
-        }
-        navHTML += `
-            <a href="#${mod.id}" class="sb-item" id="nav-${mod.id}">
-                <span class="sb-item-icon">${mod.icon}</span>${mod.label}
-            </a>`;
-    });
-    
-    navContainer.innerHTML = navHTML;
+        allowedModules.forEach(mod => {
+            if (mod.section && mod.section !== currentSection) {
+                navHTML += `<div class="sb-section">${mod.section}</div>`;
+                currentSection = mod.section;
+            }
+            navHTML += `
+                <a href="#${mod.id}" class="sb-item" id="nav-${mod.id}">
+                    <span class="sb-item-icon">${mod.icon}</span>${mod.label}
+                </a>`;
+        });
+        navContainer.innerHTML = navHTML;
+    }
 }
 /* ── JQUERY HASH ROUTER ── */
 // Canonical jQuery pattern to manage page loading without reloads
@@ -196,28 +204,22 @@ async function checkGlobalSession() {
     var savedUser = ls('session_user');
     if (!savedUser) return redirectToLogin();
 
-    _currentUser = savedUser; // Optimistic load
+    _currentUser = savedUser; 
     
-    // Check if we can reach the server to verify the session cookie
     if (USE_SERVER) {
-      try {
-        const response = await fetch(`${BACKEND_URL}/auth/me`, { credentials: 'include' });
-        if (response.ok) {
-          const result = await response.json();
-          _currentUser = result.user; // Update with backend state
-          ls('session_user', result.user);
-          onSessionVerified();
+        // Use your new helper which includes credentials
+        const data = await apiGet('/auth/me'); 
+        if (data && data.user) {
+            _currentUser = data.user;
+            ls('session_user', data.user);
+            onSessionVerified(); // This switches the UI from login to app
         } else {
-          auth.doLogout(); // Kick to login if unauthorized
+            redirectToLogin();
         }
-      } catch (err) {
-        onSessionVerified(); // Fallback to local data
-      }
     } else {
-      onSessionVerified(); // Fallback to local data
+        onSessionVerified();
     }
 }
-
 // js/app.js
 function onSessionVerified() {
     // 1. Show the shell FIRST
@@ -301,29 +303,39 @@ function buildSidebarShell() {
 ═══════════════════════════════════════════════════════ */
 
 // Global GET Helper
+// Global GET Helper
 async function apiGet(endpoint) {
     try {
         const response = await fetch(`${BACKEND_URL}${endpoint}`, {
             method: 'GET',
-            credentials: 'include', // MANDATORY: Sends the session cookie
-            headers: { 
-                'Content-Type': 'application/json',
-                'Accept': 'application/json' 
-            }
+            credentials: 'include', // CRITICAL: This fixed the 401 error
+            headers: { 'Content-Type': 'application/json' }
         });
 
         if (response.status === 401) {
-            console.warn("Session expired or unauthorized");
-            auth.doLogout(); // Boot to login
+            console.warn("Session expired - redirecting to login.");
+            auth.doLogout(); 
             return null;
         }
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) throw new Error("Server Error");
         return await response.json();
     } catch (error) {
         console.error("API Get Error:", error);
         throw error;
     }
+}
+
+// Update your fetchApiData to use the new helper
+async function fetchApiData(endpoint, fallbackFunction) {
+    if (USE_SERVER) {
+        try {
+            return await apiGet(endpoint); 
+        } catch (err) {
+            return fallbackFunction(); 
+        }
+    }
+    return fallbackFunction();
 }
 // Global POST/PUT Helper
 async function apiWrite(endpoint, method = 'POST', payload = {}) {
@@ -350,15 +362,4 @@ async function apiWrite(endpoint, method = 'POST', payload = {}) {
         console.error(`${method} Error [${endpoint}]:`, error);
         throw error;
     }
-}
-async function fetchApiData(endpoint, fallbackFunction) {
-    if (USE_SERVER) {
-        try {
-            return await apiGet(endpoint); // Uses the global helper with credentials
-        } catch (err) {
-            console.warn(`Backend error for ${endpoint}. Using local fallback.`);
-            return fallbackFunction(); 
-        }
-    }
-    return fallbackFunction();
 }
