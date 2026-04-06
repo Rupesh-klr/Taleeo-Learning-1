@@ -10,17 +10,22 @@ if (typeof curriculum === 'undefined') {
             showLoading();
             const mc = document.getElementById('main-content');
             
+            // Fetching data
+const data = await fetchApiData('/admin/courses/search', () => this._fallback());
+
+// Saving a module edit
+await apiWrite(`/admin/modules/${moduleId}`, 'PUT', { title: newTitle });
             // Backend call for joined data (Course -> Modules -> Batches)
-            const data = await fetchApiData(`/admin/courses/search?q=${searchTerm}`, () => {
+            // const data = await fetchApiData(`/admin/courses/search?q=${searchTerm}`, () => {
                 // Fallback using static MODULES if server is offline
-                const local = MODULES.map(m => ({
-                    id: m.id.toString(),
-                    name: m.title,
-                    moduleDetails: m.topics.map(t => ({ title: t })),
-                    batchDetails: []
-                })).filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
-                return { totalRecords: local.length, courses: local };
-            });
+            //     const local = MODULES.map(m => ({
+            //         id: m.id.toString(),
+            //         name: m.title,
+            //         moduleDetails: m.topics.map(t => ({ title: t })),
+            //         batchDetails: []
+            //     })).filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
+            //     return { totalRecords: local.length, courses: local };
+            // });
 
             const pinnedIds = ls('pinned_courses') || [];
             const courses = data.courses || [];

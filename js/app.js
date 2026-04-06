@@ -75,26 +75,15 @@ function buildSidebarShell() {
     document.getElementById('sb-name').textContent = u.name;
     document.getElementById('sb-role').textContent = u.role.charAt(0).toUpperCase() + u.role.slice(1);
     var isAdminType = ['admin', 'superadmin', 'staff'].includes(u.role);
-    document.getElementById('sb-role-badge').textContent = isAdminType ? 'Staff Panel' : 'Student Portal';
-    document.getElementById('sb-avatar').textContent = u.name[0].toUpperCase();
-    document.getElementById('sb-avatar').style.background = isAdminType ? 'var(--linear-admin)' : 'var(--linear-v)';
+    if (badgeEl) badgeEl.textContent = isAdminType ? 'Staff Panel' : 'Student Portal';
+    
+    if (avatarEl) {
+        avatarEl.textContent = u.name[0].toUpperCase();
+        avatarEl.style.background = isAdminType ? 'var(--linear-admin)' : 'var(--linear-v)';
+    }
 
-    var allowedModules = FRONTEND_MODULES[u.role] || FRONTEND_MODULES['student'];
-    var nav = document.getElementById('sidebar-nav');
-    var navHTML = '';
-    var currentSection = '';
-
-    allowedModules.forEach(function(mod) {
-        if (mod.section && mod.section !== currentSection) {
-            navHTML += `<div class="sb-section">${mod.section}</div>`;
-            currentSection = mod.section;
-        }
-        // Updated: Navigation now uses URL hash
-        navHTML += `<a href="#${mod.id}" class="sb-item" id="nav-${mod.id}"><span class="sb-item-icon">${mod.icon}</span>${mod.label}</a>`;
-    });
-    nav.innerHTML = navHTML;
+    renderNavigationLinks(u.role);
 }
-
 /* ── JQUERY HASH ROUTER ── */
 // Canonical jQuery pattern to manage page loading without reloads
 function handleHashRouter() {
@@ -210,16 +199,19 @@ async function checkGlobalSession() {
     }
 }
 
+// js/app.js
 function onSessionVerified() {
-    document.getElementById('login-page').style.display = 'none';
-    document.getElementById('app-shell').style.display = 'block';
-    buildSidebarShell();
+    // 1. Show the shell FIRST
+    $('#login-page').hide();
+    $('#app-shell').show();
     
-    // Now that shell is built, enable routing
-    $(window).on('hashchange', handleHashRouter);
-    handleHashRouter(); // Run once for current hash
+    // 2. Build UI after visibility is set
+    setTimeout(() => {
+        buildSidebarShell();
+        $(window).on('hashchange', handleHashRouter);
+        handleHashRouter(); 
+    }, 50); // Small delay allows DOM to recognize visible elements
 }
-
 /* ── RBAC Config ── */
 const FRONTEND_MODULES = {
   "admin": [
@@ -260,4 +252,95 @@ function completeLogin(user) {
     window.location.hash = defaultPage; // This triggers handleHashRouter
     
     showToast('Welcome back, ' + user.name + '! 👋', '✅');
+}
+// js/app.js
+function buildSidebarShell() {
+    var u = _currentUser;
+    if (!u) return;
+
+    // Use safe selection to prevent null errors
+    const nameEl = document.getElementById('sb-name');
+    const roleEl = document.getElementById('sb-role');
+    const badgeEl = document.getElementById('sb-role-badge');
+    const avatarEl = document.getElementById('sb-avatar');
+
+    if (nameEl) nameEl.textContent = u.name;
+    if (roleEl) roleEl.textContent = u.role.charAt(0).toUpperCase() + u.role.slice(1);
+    
+    var isAdminType = ['admin', 'superadmin', 'staff'].includes(u.role);
+    if (badgeEl) badgeEl.textContent = isAdminType ? 'Staff Panel' : 'Student Portal';
+    
+    if (avatarEl) {
+        avatarEl.textContent = u.name[0].toUpperCase();
+        avatarEl.style.background = isAdminType ? 'var(--linear-admin)' : 'var(--linear-v)';
+    }
+
+    renderNavigationLinks(u.role);
+}
+/* ═══════════════════════════════════════════════════════
+   GLOBAL DATA FETCHERS (Centralized in app.js)
+═══════════════════════════════════════════════════════ */
+
+// Global GET Helper
+async function apiGet(endpoint) {
+    try {
+        const response = await fetch(`${BACKEND_URL}${endpoint}`, {
+            method: 'GET',
+            credentials: 'include', // CRITICAL: This sends your cookies/session
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (response.status === 401) {
+            auth.doLogout(); // Automatically boot to login if session expired
+            throw new Error("Session expired. Please login again.");
+        }
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.message || "Server Error");
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error(`GET Error [${endpoint}]:`, error);
+        throw error;
+    }
+}
+
+// Global POST/PUT Helper
+async function apiWrite(endpoint, method = 'POST', payload = {}) {
+    try {
+        const response = await fetch(`${BACKEND_URL}${endpoint}`, {
+            method: method,
+            credentials: 'include', // CRITICAL: Sends session info
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.status === 401) {
+            auth.doLogout();
+            throw new Error("Unauthorized access.");
+        }
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.message || "Save Failed");
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error(`${method} Error [${endpoint}]:`, error);
+        throw error;
+    }
+}
+async function fetchApiData(endpoint, fallbackFunction) {
+    if (USE_SERVER) {
+        try {
+            return await apiGet(endpoint); // Uses the global helper with credentials
+        } catch (err) {
+            console.warn(`Backend error for ${endpoint}. Using local fallback.`);
+            return fallbackFunction(); 
+        }
+    }
+    return fallbackFunction();
 }
