@@ -1,6 +1,7 @@
 /* ═══════════════════════════════════════════════════════
    CURRICULUM MODULE (Unified Admin & Student)
 ═══════════════════════════════════════════════════════ */
+
 const curriculum = {
     _currentRole: null,
     _data: null, // Stores combined courses from backend lookups
@@ -17,11 +18,11 @@ const curriculum = {
         
         // Foreign Key Pattern Call
         // This relies on the Backend executeAggregate getCourseFullDetails query
-        this._data = await this._fetchApiData(`/admin/courses/search?q=${searchTerm}`, () => {
-            // FALLBACK Logic if backend fails
-            return this._fallbackData();
-        });
-
+        // Inside curriculum.js fetchCurriculum function
+const data = await fetchApiData(`/admin/courses/search?q=${searchTerm}`, () => {
+    // This fallback ensures the UI works even if the API fails
+    return this._fallbackData(); 
+});
         // Search bar UI is needed first
         this.renderCurriculumHeader(searchTerm);
         

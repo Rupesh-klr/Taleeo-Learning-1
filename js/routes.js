@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════
    CENTRALIZED hash-based routes mapping
 ═══════════════════════════════════════════════════════ */
-const ROUTES = {
+var ROUTES = {
   // Authentication (Global)
   "login": "pages/login.html",
   "signup": "pages/signup.html",
@@ -30,3 +30,12 @@ const ROUTES = {
     "student": "student-dashboard"
   }
 };
+// Check if already exists to prevent redeclaration error
+if (typeof ROUTES === 'undefined') {
+     ROUTES = {
+        "login": "pages/login.html",
+        "admin-dashboard": "pages/dashboard.html",
+        // ... rest of your routes
+        "default": { "admin": "admin-dashboard", "student": "student-dashboard" }
+    };
+}

@@ -167,12 +167,20 @@ function initializeModule(hash) {
 }
 /* ── AUTH HELPERS ── */
 function redirectToLogin() {
-    // If not logged in, we need the FULL index.html reload to handle the modal or view state
-    document.getElementById('app-shell').style.display = 'none';
-    document.getElementById('login-page').style.display = 'block';
+    const loginContainer = document.getElementById('login-page');
+    const appShell = document.getElementById('app-shell');
+    
+    if (loginContainer && appShell) {
+        appShell.style.display = 'none';
+        loginContainer.style.display = 'block';
+        
+        // Use jQuery to load the modular login page into the container
+        $("#login-page").load("pages/login.html", function() {
+            console.log("Login module loaded dynamically.");
+        });
+    }
     window.location.hash = 'login';
 }
-
 function redirectToDefaultPage() {
     document.getElementById('login-page').style.display = 'none';
     document.getElementById('app-shell').style.display = 'block';

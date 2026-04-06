@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════
    AUTH MODULE
 ═══════════════════════════════════════════════════════ */
-const auth = {
+var auth = {
     _loginPending: null,
 
     doLogin: async function() {
@@ -40,3 +40,9 @@ const auth = {
         redirectToLogin();
     }
 };
+if (typeof auth === 'undefined') {
+     auth = {
+        doLogin: async function() { /* ... */ },
+        doLogout: function() { /* ... */ }
+    };
+}
