@@ -22,12 +22,28 @@
 <body>
   <div id="login-page" style="display:none;"></div>
 
+  
   <div id="app-shell" style="display:none;">
     <div class="sidebar" id="sidebar">
-       <nav class="sidebar-nav" id="sidebar-nav"></nav>
-       </div>
+        <div class="sidebar-logo">
+            <div class="sb-logo-text">TALeeO LMS</div>
+            <div class="sb-logo-sub" id="sb-role-badge">Staff Panel</div>
+        </div>
+        
+        <nav class="sidebar-nav" id="sidebar-nav"></nav>
+        
+        <div class="sidebar-footer">
+            <div class="sb-user">
+                <div class="sb-avatar" id="sb-avatar">U</div>
+                <div>
+                    <div class="sb-name" id="sb-name">User Name</div>
+                    <div class="sb-role" id="sb-role">Role</div>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="main-content" id="main-content"></div>
-  </div>
+</div>
 
   <script src="js/routes.js"></script>
   <script src="js/modules/auth.js"></script>
